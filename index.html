@@ -1,1 +1,324 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mes cours</title>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f4f6fb;--sf:#fff;--tx:#1c2333;--mu:#5d667a;--ac:#2840b8;--acx:#fff;--hl:#ffe45e;--bd:#d8deec}
+@media(prefers-color-scheme:dark){:root{--bg:#12151f;--sf:#1b2030;--tx:#e8ebf5;--mu:#9aa3ba;--ac:#8fa2ff;--acx:#12151f;--hl:#6b5d00;--bd:#2c3348}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:"Atkinson Hyperlegible",system-ui,sans-serif;background:var(--bg);color:var(--tx);font-size:16px;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:2px solid var(--tx)}
+h1{font-size:22px;margin:0}
+button,select,input,textarea{font:inherit;color:var(--tx)}
+button{background:var(--sf);border:1.5px solid var(--tx);border-radius:6px;padding:6px 12px;cursor:pointer}
+button:hover{background:var(--hl)}
+button.p{background:var(--ac);color:var(--acx);border-color:var(--ac)}
+button.p:hover{opacity:.9;background:var(--ac)}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid var(--ac);outline-offset:2px}
+main{display:grid;grid-template-columns:minmax(260px,340px) 1fr;gap:18px;padding:18px;max-width:1200px;margin:0 auto}
+@media(max-width:760px){main{grid-template-columns:1fr}}
+.themes{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.themes button{font-size:14px;padding:3px 10px;border-radius:99px;border-color:var(--bd)}
+.themes button.on{background:var(--tx);color:var(--bg);border-color:var(--tx)}
+.tools{display:flex;gap:8px;margin-bottom:10px}
+.tools input,.tools select{flex:1;min-width:0;padding:6px 8px;background:var(--sf);border:1.5px solid var(--bd);border-radius:6px}
+.item{display:flex;align-items:center;gap:6px;background:var(--sf);border:1.5px solid var(--bd);border-radius:8px;margin-bottom:6px;padding:4px 4px 4px 12px}
+.item.on{border-color:var(--ac);box-shadow:inset 4px 0 0 var(--ac)}
+.item .t{flex:1;text-align:left;border:0;background:none;padding:6px 0;min-width:0}
+.item .t:hover{background:none}
+.item b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item small{color:var(--mu)}
+.mv{border:0;padding:2px 6px;font-size:13px}
+.panel{background:var(--sf);border:1.5px solid var(--bd);border-radius:10px;padding:18px;min-width:0}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.ti{flex:1;min-width:200px;font-size:24px;font-weight:700;border:0;border-bottom:2px solid var(--bd);background:none;padding:4px 0}
+.th{border:1.5px solid var(--bd);border-radius:6px;padding:6px 8px;background:none}
+.tabs{display:flex;gap:6px;margin:6px 0 14px}
+.tabs button{border-color:var(--bd)}
+.tabs button.on{background:var(--hl);border-color:var(--tx)}
+textarea{width:100%;min-height:320px;padding:10px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg);line-height:1.6;resize:vertical}
+textarea.lined{background:repeating-linear-gradient(var(--sf),var(--sf) 27px,var(--bd) 28px);line-height:28px;min-height:140px;padding:0 12px;border-color:var(--tx)}
+.note{margin-bottom:14px}
+.note .h{display:flex;justify-content:space-between;color:var(--mu);font-size:14px;margin-bottom:4px}
+h3{margin:18px 0 8px;font-size:17px;background:linear-gradient(transparent 55%,var(--hl) 55%);display:inline-block}
+.fiche ul{margin:0;padding-left:20px;line-height:1.7}
+.kw{display:flex;flex-wrap:wrap;gap:6px}
+.kw span{background:var(--hl);padding:2px 10px;border-radius:4px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.fc{border:1.5px solid var(--tx);border-radius:8px;padding:10px;cursor:pointer;min-height:84px}
+.fc span{display:none;margin-top:6px;color:var(--mu)}
+.fc.on span{display:block}
+.fc.on{background:var(--hl)}
+.empty{color:var(--mu);padding:30px 10px;text-align:center}
+dialog{border:2px solid var(--tx);border-radius:10px;background:var(--sf);color:var(--tx);max-width:520px;width:92%}
+dialog textarea{min-height:160px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Mes cours</h1>
+  <div class="row" style="margin:0">
+    <button class="p" onclick="addCourse()">+ Nouveau cours</button>
+    <button class="p" onclick="el('nty').showModal()">Connecter Netypareo</button>
+    <button onclick="el('dlg').showModal()">Ajouter une liste</button>
+    <button onclick="exportData()">Sauvegarder</button>
+    <button onclick="el('file').click()">Restaurer</button>
+    <input type="file" id="file" accept=".json" hidden onchange="importData(this)">
+  </div>
+</header>
+<main>
+  <section>
+    <div class="themes" id="themes"></div>
+    <div class="tools">
+      <input id="q" type="search" placeholder="Rechercher un cours" oninput="S.q=this.value;renderList()">
+      <select id="sort" onchange="S.sort=this.value;save();renderList()" aria-label="Trier">
+        <option value="order">Mon ordre</option>
+        <option value="new">Ajout : récent</option>
+        <option value="old">Ajout : ancien</option>
+        <option value="az">A → Z</option>
+      </select>
+    </div>
+    <div id="list"></div>
+  </section>
+  <section class="panel" id="detail"></section>
+</main>
 
+<dialog id="nty">
+  <form method="dialog" onsubmit="ntySync();return false">
+    <p><b>Connexion à Netypareo</b></p>
+    <input id="nu" class="th" style="width:100%;margin-bottom:8px" placeholder="Identifiant Netypareo" autocomplete="username">
+    <input id="np" class="th" type="password" style="width:100%;margin-bottom:8px" placeholder="Mot de passe" autocomplete="current-password">
+    <button class="p" type="submit">Synchroniser mes cours</button>
+    <p id="nst" role="status" style="color:var(--mu);font-size:14px"></p>
+    <p><small>Il faut lancer une fois <b>netypareo_helper.py</b> sur ton ordinateur (voir les instructions). Ton mot de passe n’est jamais enregistré.</small></p>
+    <details><summary>Sans programme : favori à cliquer depuis Netypareo</summary>
+    <p><a id="bm" style="display:inline-block;margin:6px 0;padding:6px 12px;border:1.5px solid var(--tx);border-radius:6px;background:var(--hl);color:var(--tx);text-decoration:none;cursor:grab">Envoyer ce cours vers Mes cours</a><br>
+    <small>Glisse-le dans ta barre de favoris, ouvre un cours sur Netypareo, puis clique dessus. Sur téléphone, remplace l’adresse d’un favori par le code :</small></p>
+    <textarea id="bmcode" readonly style="min-height:70px;font-size:12px"></textarea></details>
+    <div class="row" style="margin:10px 0 0;justify-content:flex-end"><button type="button" onclick="el('nty').close()">Fermer</button></div>
+  </form>
+</dialog>
+
+<dialog id="dlg">
+  <form method="dialog">
+    <p><b>Ajouter plusieurs cours d’un coup</b><br><small>Un cours par ligne, au format : Thème | Titre du cours<br>Exemple : Maths | Les fractions</small></p>
+    <textarea id="bulk" placeholder="Maths | Les fractions&#10;Histoire | La Révolution française"></textarea>
+    <div class="row" style="margin:10px 0 0;justify-content:flex-end">
+      <button value="cancel">Annuler</button>
+      <button class="p" value="ok" onclick="bulkAdd()">Ajouter</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+var KEY="mes-cours-v1";
+var S={courses:[],sort:"order",theme:"",cur:"",tab:"cours",scope:"cours",q:""};
+function el(i){return document.getElementById(i)}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function uid(){return Math.random().toString(36).slice(2,9)}
+function load(){try{var d=JSON.parse(localStorage.getItem(KEY));if(d&&d.courses){S.courses=d.courses;S.sort=d.sort||"order"}}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify({courses:S.courses,sort:S.sort}))}catch(e){}}
+function fmt(t){return new Date(t).toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"numeric"})}
+function get(id){return S.courses.filter(function(c){return c.id===id})[0]}
+function nextOrder(){return S.courses.reduce(function(m,c){return Math.max(m,c.order)},0)+1}
+
+function addCourse(){
+  var c={id:uid(),title:"Nouveau cours",theme:S.theme||"Général",content:"",notes:[],created:Date.now(),order:nextOrder()};
+  S.courses.push(c);S.cur=c.id;S.tab="cours";save();render();
+  var t=el("ti");if(t){t.focus();t.select()}
+}
+function bulkAdd(){
+  el("bulk").value.split("\n").forEach(function(l){
+    l=l.trim();if(!l)return;
+    var p=l.split("|"),th=p.length>1?p[0].trim():"Général",ti=(p.length>1?p.slice(1).join("|"):l).trim();
+    S.courses.push({id:uid(),title:ti,theme:th||"Général",content:"",notes:[],created:Date.now(),order:nextOrder()});
+  });
+  el("bulk").value="";save();render();
+}
+function del(id){
+  if(!confirm("Supprimer ce cours et ses notes ?"))return;
+  (get(id).files||[]).forEach(function(f){delFile(f.id)});S.courses=S.courses.filter(function(c){return c.id!==id});S.cur="";save();render();
+}
+function sorted(){
+  var L=S.courses.filter(function(c){
+    return (!S.theme||c.theme===S.theme)&&(!S.q||(c.title+" "+c.content).toLowerCase().indexOf(S.q.toLowerCase())>-1);
+  });
+  var f={order:function(a,b){return a.order-b.order},new:function(a,b){return b.created-a.created},
+    old:function(a,b){return a.created-b.created},az:function(a,b){return a.title.localeCompare(b.title,"fr")}}[S.sort];
+  return L.sort(f);
+}
+function move(id,d){
+  var L=sorted(),i=L.findIndex(function(c){return c.id===id}),j=i+d;
+  if(j<0||j>=L.length)return;
+  var t=L[i].order;L[i].order=L[j].order;L[j].order=t;save();renderList();
+}
+function pick(id){S.cur=id;renderList();renderDetail()}
+function setTheme(t){S.theme=t;render()}
+
+function renderThemes(){
+  var th={};S.courses.forEach(function(c){th[c.theme]=(th[c.theme]||0)+1});
+  var h='<button class="'+(S.theme?"":"on")+'" onclick="setTheme(\'\')">Tous ('+S.courses.length+')</button>';
+  Object.keys(th).sort().forEach(function(t){
+    h+='<button class="'+(S.theme===t?"on":"")+'" data-t="'+esc(t)+'" onclick="setTheme(this.dataset.t)">'+esc(t)+' ('+th[t]+')</button>';
+  });
+  el("themes").innerHTML=h;
+}
+function renderList(){
+  var L=sorted(),h="";
+  L.forEach(function(c){
+    h+='<div class="item'+(c.id===S.cur?" on":"")+'"><button class="t" onclick="pick(\''+c.id+'\')"><b>'+esc(c.title)+'</b><small>'+esc(c.theme)+" · ajouté le "+fmt(c.created)+'</small></button>';
+    if(S.sort==="order")h+='<button class="mv" onclick="move(\''+c.id+'\',-1)" aria-label="Monter">▲</button><button class="mv" onclick="move(\''+c.id+'\',1)" aria-label="Descendre">▼</button>';
+    h+='</div>';
+  });
+  el("list").innerHTML=h||'<div class="empty">Aucun cours. Cliquez sur « Nouveau cours » pour commencer.</div>';
+  el("sort").value=S.sort;
+}
+
+/* Fiche de révision automatique */
+var STOP="avec dans pour mais cette comme sont être avoir elle elles nous vous leur leurs plus tout tous ainsi aussi donc alors entre sans sous chez très fait faire peut peuvent celui celle ceux cela cette ces des les une est que qui par sur pas".split(" ");
+function analyse(txt){
+  var pts=[],defs=[],words={};
+  txt.split("\n").forEach(function(l){
+    var s=l.trim();if(!s)return;
+    var m=s.match(/^([-•*]|\d+[.)]|#+)\s+(.+)$/);
+    var d=s.replace(/^([-•*]|\d+[.)]|#+)\s+/,"").match(/^([^:=]{2,60}?)\s*[:=]\s*(.{5,})$/);
+    if(d)defs.push({t:d[1],d:d[2]});
+    else if(m)pts.push(m[2]);
+  });
+  if(!pts.length&&!defs.length){
+    txt.split(/\n\s*\n/).forEach(function(p){var f=p.trim().split(/(?<=[.!?])\s/)[0];if(f&&f.length>15)pts.push(f)});
+  }
+  (txt.toLowerCase().match(/[a-zàâçéèêëîïôûùüÿœ-]{6,}/g)||[]).forEach(function(w){if(STOP.indexOf(w)<0)words[w]=(words[w]||0)+1});
+  var kw=Object.keys(words).filter(function(w){return words[w]>1}).sort(function(a,b){return words[b]-words[a]}).slice(0,10);
+  return{pts:pts,defs:defs,kw:kw};
+}
+function ficheHTML(list){
+  var out="";
+  list.forEach(function(c){
+    var a=analyse(c.content);
+    if(list.length>1)out+='<h2 style="font-size:19px;margin:22px 0 0">'+esc(c.title)+'</h2>';
+    if(!a.pts.length&&!a.defs.length){out+='<p class="empty">Rien à résumer : écrivez le contenu du cours dans l’onglet Cours.</p>';return}
+    if(a.kw.length)out+='<h3>Mots-clés</h3><div class="kw">'+a.kw.map(function(k){return"<span>"+esc(k)+"</span>"}).join("")+"</div>";
+    if(a.pts.length)out+='<h3>Points essentiels</h3><ul>'+a.pts.map(function(p){return"<li>"+esc(p)+"</li>"}).join("")+"</ul>";
+    if(a.defs.length)out+='<h3>Flashcards <small style="font-weight:400">(cliquez pour voir la réponse)</small></h3><div class="cards">'+
+      a.defs.map(function(d){return'<div class="fc" onclick="this.classList.toggle(\'on\')"><b>'+esc(d.t)+" ?</b><span>"+esc(d.d)+"</span></div>"}).join("")+"</div>";
+  });
+  return out;
+}
+
+function renderDetail(){
+  var c=get(S.cur),box=el("detail");
+  if(!c){box.innerHTML='<div class="empty">Choisissez un cours à gauche ou créez-en un.</div>';return}
+  var themes=Object.keys(S.courses.reduce(function(o,x){o[x.theme]=1;return o},{}));
+  var h='<div class="row"><input class="ti" id="ti" value="'+esc(c.title)+'" aria-label="Titre" oninput="upd(\'title\',this.value)">'+
+    '<input class="th" list="tl" value="'+esc(c.theme)+'" aria-label="Thème" oninput="upd(\'theme\',this.value)"><datalist id="tl">'+themes.map(function(t){return'<option value="'+esc(t)+'">'}).join("")+'</datalist>'+
+    '<button onclick="del(\''+c.id+'\')">Supprimer</button></div>'+
+    '<small style="color:var(--mu)">Ajouté le '+fmt(c.created)+'</small>'+
+    '<div class="tabs">'+[["cours","Cours"],["fiche","Fiche de révision"],["files","Fichiers ("+(c.files||[]).length+")"],["notes","Notes ("+c.notes.length+")"]].map(function(t){
+      return'<button class="'+(S.tab===t[0]?"on":"")+'" onclick="S.tab=\''+t[0]+'\';renderDetail()">'+t[1]+"</button>"}).join("")+"</div>";
+  if(S.tab==="cours"){
+    h+='<textarea oninput="upd(\'content\',this.value,1)" placeholder="Collez ou écrivez votre cours ici.&#10;&#10;Pour une fiche de révision automatique :&#10;- une ligne qui commence par un tiret = point essentiel&#10;- Mot : définition = flashcard">'+esc(c.content)+"</textarea>";
+  }else if(S.tab==="fiche"){
+    var th=S.courses.filter(function(x){return x.theme===c.theme}).sort(function(a,b){return a.order-b.order});
+    h+='<div class="row"><button class="'+(S.scope==="cours"?"p":"")+'" onclick="S.scope=\'cours\';renderDetail()">Ce cours</button>'+
+       '<button class="'+(S.scope==="theme"?"p":"")+'" onclick="S.scope=\'theme\';renderDetail()">Tout le thème « '+esc(c.theme)+" » ("+th.length+')</button></div>'+
+       '<div class="fiche">'+ficheHTML(S.scope==="theme"?th:[c])+"</div>";
+  }else if(S.tab==="files"){
+    h+='<div class="row"><button class="p" onclick="el(\'up\').click()">+ Ajouter un fichier</button><input type="file" id="up" multiple hidden onchange="upFiles(this)"></div>';
+    h+=(c.files||[]).map(function(f){return'<div class="item"><span class="t" style="padding:8px 0"><b>'+esc(f.name)+'</b><small>'+kb(f.size)+'</small></span><button class="mv" onclick="dlFile(\''+f.id+'\',this.dataset.n)" data-n="'+esc(f.name)+'">Télécharger</button><button class="mv" onclick="rmFile(\''+f.id+'\')">Supprimer</button></div>'}).join("")||'<div class="empty">Aucun fichier. Ajoutez-en ou importez un cours depuis Netypareo.</div>';
+  }else{
+    h+='<div class="row"><button class="p" onclick="addNote()">+ Ajouter une note</button></div>';
+    h+=c.notes.map(function(n){
+      return'<div class="note"><div class="h"><span>Note du '+fmt(n.date)+'</span><button class="mv" onclick="delNote(\''+n.id+'\')">Supprimer</button></div>'+
+        '<textarea class="lined" oninput="updNote(\''+n.id+'\',this.value)" placeholder="Écrivez votre note…">'+esc(n.text)+"</textarea></div>";
+    }).join("")||'<div class="empty">Aucune note pour ce cours.</div>';
+  }
+  box.innerHTML=h;
+}
+function upd(k,v,quiet){
+  var c=get(S.cur);c[k]=v;save();
+  if(k==="title"||k==="theme"){renderList();if(k==="theme")renderThemes()}
+}
+function addNote(){var c=get(S.cur);c.notes.unshift({id:uid(),text:"",date:Date.now()});save();renderDetail();var t=document.querySelector("textarea.lined");if(t)t.focus()}
+function updNote(id,v){get(S.cur).notes.forEach(function(n){if(n.id===id)n.text=v});save()}
+function delNote(id){var c=get(S.cur);c.notes=c.notes.filter(function(n){return n.id!==id});save();renderDetail()}
+
+function exportData(){
+  var b=new Blob([JSON.stringify({courses:S.courses,sort:S.sort},null,1)],{type:"application/json"});
+  var a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="mes-cours-sauvegarde.json";a.click();
+}
+function importData(inp){
+  var f=inp.files[0];if(!f)return;
+  var r=new FileReader();
+  r.onload=function(){try{var d=JSON.parse(r.result);if(d.courses){S.courses=d.courses;save();render()}else alert("Fichier non valide.")}catch(e){alert("Fichier non valide.")}};
+  r.readAsText(f);
+}
+/* Fichiers (IndexedDB) */
+var DB;
+function db(cb){if(DB)return cb(DB);try{var r=indexedDB.open("mes-cours-files",1);r.onupgradeneeded=function(){r.result.createObjectStore("f",{keyPath:"id"})};r.onsuccess=function(){DB=r.result;cb(DB)};r.onerror=function(){cb(null)}}catch(e){cb(null)}}
+function putFile(rec,cb){db(function(d){if(!d)return cb(false);var t=d.transaction("f","readwrite");t.objectStore("f").put(rec);t.oncomplete=function(){cb(true)};t.onerror=function(){cb(false)}})}
+function getFile(id,cb){db(function(d){if(!d)return;var q=d.transaction("f").objectStore("f").get(id);q.onsuccess=function(){cb(q.result)}})}
+function delFile(id){db(function(d){if(d)d.transaction("f","readwrite").objectStore("f").delete(id)})}
+function attach(c,list,done){
+  var i=0;(function nx(){
+    if(i>=list.length){save();return done&&done()}
+    var f=list[i++];
+    f.get().then(function(b){var id=uid();putFile({id:id,blob:b,name:f.name,type:b.type},function(ok){if(ok){c.files=c.files||[];c.files.push({id:id,name:f.name,size:b.size})}nx()})}).catch(nx);
+  })();
+}
+function upFiles(inp){
+  var c=get(S.cur);
+  attach(c,[].map.call(inp.files,function(f){return{name:f.name,get:function(){return Promise.resolve(f)}}}),renderDetail);
+}
+function dlFile(id,name){getFile(id,function(r){if(!r)return;var a=document.createElement("a");a.href=URL.createObjectURL(r.blob);a.download=name;a.click()})}
+function rmFile(id){
+  var c=get(S.cur);c.files=(c.files||[]).filter(function(f){return f.id!==id});delFile(id);save();renderDetail();
+}
+function kb(n){return n>1048576?(n/1048576).toFixed(1)+" Mo":Math.max(1,Math.round(n/1024))+" Ko"}
+
+/* Synchronisation via le programme d'aide local */
+function ntySync(){
+  var u=el("nu").value,p=el("np").value,st=el("nst");
+  if(!u||!p){st.textContent="Entre ton identifiant et ton mot de passe.";return}
+  st.textContent="Connexion à Netypareo… cela peut prendre une minute.";
+  fetch("http://127.0.0.1:8765/sync",{method:"POST",body:JSON.stringify({user:u,pass:p})})
+  .then(function(r){return r.json()}).then(function(d){
+    el("np").value="";
+    if(d.error){st.textContent=d.error;return}
+    var have={},n=0;S.courses.forEach(function(c){if(c.src)have[c.src]=1});
+    d.courses.forEach(function(x){
+      if(have[x.key])return;n++;
+      var c={id:uid(),src:x.key,title:x.title,theme:x.theme,content:x.text,notes:[],files:[],created:x.date||Date.now(),order:nextOrder()};
+      S.courses.push(c);
+      attach(c,x.files.map(function(f){return{name:f.name,get:function(){return fetch(f.data).then(function(r){return r.blob()})}}}),render);
+    });
+    save();render();
+    st.textContent=n+" nouveau(x) cours importé(s), "+(d.courses.length-n)+" déjà présent(s).";
+  }).catch(function(){st.textContent="Le programme d’aide ne répond pas. Lance netypareo_helper.py sur ton ordinateur, puis réessaie."});
+}
+
+/* Réception depuis Netypareo (favori) */
+window.addEventListener("message",function(e){
+  var m=e.data;if(!m||m.type!=="nty"||!Array.isArray(m.files))return;
+  if(!confirm("Importer « "+m.title+" » avec "+m.files.length+" fichier(s) ?"))return;
+  var c={id:uid(),title:String(m.title).slice(0,200),theme:"Netypareo",content:(m.url?"Source : "+m.url+"\n\n":"")+String(m.text||""),notes:[],files:[],created:Date.now(),order:nextOrder()};
+  S.courses.push(c);S.cur=c.id;S.tab="cours";save();render();
+  attach(c,m.files.map(function(f){return{name:String(f.name),get:function(){return fetch(f.data).then(function(r){return r.blob()})}}}),function(){render()});
+});
+function mkBM(){
+  var app=location.href.split("#")[0].split("?")[0];
+  var code="(function(){var APP="+JSON.stringify(app)+";var w=window.open(APP,'mescours');if(!w){alert('Autorise les popups pour ce site.');return}var ready=0,pay=null;function go(){if(ready&&pay)w.postMessage(pay,APP.split('/').slice(0,3).join('/'))}window.addEventListener('message',function(e){if(e.source===w&&e.data&&e.data.ready){ready=1;go()}});var root=document.querySelector('main,#contenu,.contenu,#content')||document.body;var ls=[].slice.call(document.querySelectorAll('a[href]')).filter(function(a){return /\\.(pdf|docx?|pptx?|xlsx?|odt|ods|odp|txt|png|jpe?g|gif|zip)(\\?|$)/i.test(a.href)||/download|telecharg|fichier|document|piece/i.test(a.href)});var seen={},out=[];ls=ls.filter(function(a){if(/logout|deconn|supprim|delete/i.test(a.href)||seen[a.href])return false;seen[a.href]=1;return true}).slice(0,25);var n=ls.length;function fin(){var h=document.querySelector('h1,h2');pay={type:'nty',title:((h&&h.innerText)||document.title).trim()||'Cours',url:location.href,text:root.innerText.trim().slice(0,30000),files:out};go()}if(!n)return fin();ls.forEach(function(a){fetch(a.href,{credentials:'include'}).then(function(r){if(/text\\/html/.test(r.headers.get('content-type')||''))throw 0;return r.blob()}).then(function(b){if(b.size>8e6)throw 0;return new Promise(function(ok){var fr=new FileReader();fr.onload=function(){ok(fr.result)};fr.readAsDataURL(b)})}).then(function(d){var nm=a.innerText.trim()||decodeURIComponent(a.href.split('?')[0].split('/').pop())||'fichier';var x=(a.href.split('?')[0].match(/\\.[a-z0-9]{2,4}$/i)||[''])[0];if(nm.indexOf('.')<0)nm+=x;out.push({name:nm,data:d})}).catch(function(){}).then(function(){if(--n===0)fin()})})})();";
+  return "javascript:"+code;
+}
+var BMV=mkBM();el("bm").href=BMV;el("bmcode").value=BMV;
+if(window.opener){try{window.opener.postMessage({ready:1},"*")}catch(e){}}
+function render(){renderThemes();renderList();renderDetail()}
+load();render();
+</script>
+</body>
+</html>
