@@ -37,7 +37,7 @@ main{display:grid;grid-template-columns:minmax(260px,340px) 1fr;gap:18px;padding
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
 .ti{flex:1;min-width:200px;font-size:24px;font-weight:700;border:0;border-bottom:2px solid var(--bd);background:none;padding:4px 0}
 .th{border:1.5px solid var(--bd);border-radius:6px;padding:6px 8px;background:none}
-.tabs{display:flex;gap:6px;margin:6px 0 14px}
+.tabs{display:flex;gap:6px;margin:6px 0 14px;flex-wrap:wrap}
 .tabs button{border-color:var(--bd)}
 .tabs button.on{background:var(--hl);border-color:var(--tx)}
 textarea{width:100%;min-height:320px;padding:10px;border:1.5px solid var(--bd);border-radius:8px;background:var(--bg);line-height:1.6;resize:vertical}
@@ -62,6 +62,8 @@ dialog textarea{min-height:160px}
 .grp{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:14px 0 6px;font-weight:700;border-bottom:2px solid var(--tx);padding-bottom:3px}
 .grp small{color:var(--mu);font-weight:400}
 .grp button{font-size:13px;padding:2px 10px;background:var(--hl)}
+.grp div{display:flex;gap:6px}
+.warn{background:var(--hl);padding:8px 12px;border-radius:8px;margin:10px 0}
 @media print{header,main>section:first-child,.noprint{display:none!important}main{display:block;padding:0}.panel{border:0;padding:0}.fc span{display:block}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -136,6 +138,7 @@ function save(){try{localStorage.setItem(KEY,JSON.stringify({courses:S.courses,s
 function fmt(t){return new Date(t).toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"numeric"})}
 function get(id){return S.courses.filter(function(c){return c.id===id})[0]}
 function nextOrder(){return S.courses.reduce(function(m,c){return Math.max(m,c.order)},0)+1}
+function srcLabel(c){return c.src?(c.src.indexOf("cdt")===0?"cahier de texte":"planning"):"ajouté à la main"}
 
 function addCourse(){
   var c={id:uid(),title:"Nouveau cours",theme:S.theme||"Général",content:"",notes:[],created:Date.now(),order:nextOrder()};
@@ -146,7 +149,7 @@ function bulkAdd(){
   el("bulk").value.split("\n").forEach(function(l){
     l=l.trim();if(!l)return;
     var p=l.split("|"),th=p.length>1?p[0].trim():"Général",ti=(p.length>1?p.slice(1).join("|"):l).trim();
-    S.courses.push({id:uid(),title:ti,theme:th||"Général",content:"",notes:[],created:Date.now(),order:nextOrder()});
+    S.courses.push({id:uid(),title:ti,theme:th||"Général",lock:p.length>1,content:"",notes:[],created:Date.now(),order:nextOrder()});
   });
   el("bulk").value="";save();render();
 }
@@ -182,8 +185,8 @@ function renderList(){
   var L=sorted(),h="",last=null,cnt={};
   L.forEach(function(c){cnt[c.theme]=(cnt[c.theme]||0)+1});
   L.forEach(function(c){
-    if(S.sort==="mat"&&c.theme!==last){last=c.theme;h+='<div class="grp"><span>'+esc(c.theme)+' <small>('+cnt[c.theme]+')</small></span><button data-t="'+esc(c.theme)+'" onclick="ficheMat(this.dataset.t)">Fiche</button></div>'}
-    h+='<div class="item'+(c.id===S.cur?" on":"")+'"><button class="t" onclick="pick(\''+c.id+'\')"><b>'+esc(c.title)+'</b><small>'+esc(c.theme)+" · ajouté le "+fmt(c.created)+'</small></button>';
+    if(S.sort==="mat"&&c.theme!==last){last=c.theme;h+='<div class="grp"><span>'+esc(c.theme)+' <small>('+cnt[c.theme]+')</small></span><div><button data-t="'+esc(c.theme)+'" onclick="recents(this.dataset.t)">5 derniers cours</button><button data-t="'+esc(c.theme)+'" onclick="ficheMat(this.dataset.t)">Fiche</button></div></div>'}
+    h+='<div class="item'+(c.id===S.cur?" on":"")+'"><button class="t" onclick="pick(\''+c.id+'\')"><b>'+esc(c.title)+'</b><small>'+esc(c.theme)+" · cours du "+fmt(c.created)+" · "+srcLabel(c)+'</small></button>';
     if(S.sort==="order")h+='<button class="mv" onclick="move(\''+c.id+'\',-1)" aria-label="Monter">▲</button><button class="mv" onclick="move(\''+c.id+'\',1)" aria-label="Descendre">▼</button>';
     h+='</div>';
   });
@@ -257,8 +260,8 @@ function flash(defs,max){
 }
 function block(c,a,o){
   var h="";
-  if(o.title)h+='<h2 class="ft">'+esc(c.title)+'</h2><small class="mu">'+esc(c.theme)+" · "+fmt(c.created)+"</small>";
-  if(!a.pts.length&&!a.defs.length)return h+'<p class="empty">Contenu trop court pour faire une fiche : colle le texte du cours dans l’onglet Cours.</p>';
+  if(o.title)h+='<h2 class="ft">'+esc(c.title)+'</h2><small class="mu">'+esc(c.theme)+" · "+fmt(c.created)+" · "+srcLabel(c)+"</small>";
+  if(!a.pts.length&&!a.defs.length)return h+'<p class="empty">Ce cours n’a pas de contenu lisible (seulement un titre). Resynchronise avec le programme d’aide à jour, ou colle le texte du cours dans l’onglet Cours.</p>';
   if(o.kw&&a.kw.length)h+='<h3>Mots-clés</h3><div class="kw">'+a.kw.map(function(k){return"<span>"+esc(k)+"</span>"}).join("")+"</div>";
   if(a.pts.length)h+='<h3>Points essentiels</h3><ul>'+a.pts.slice(0,o.max||99).map(function(p){return"<li>"+esc(p)+"</li>"}).join("")+"</ul>";
   if(a.defs.length)h+='<h3>Flashcards <small style="font-weight:400">(cliquez pour voir la réponse)</small></h3><div class="cards">'+flash(a.defs,o.max?4:99)+"</div>";
@@ -302,11 +305,13 @@ function autoMatiere(title,text,hint){
 function autoClass(){
   var gen=["","Netypareo","Général","Autre"],n=0;
   S.courses.forEach(function(c){
+    if(c.lock)return;
     if(gen.indexOf(c.theme)>-1||c.src){var m=autoMatiere(c.title,c.content,c.src?"":c.theme);if(m!==c.theme){c.theme=m;n++}}
   });
-  save();render();alert(n+" cours classé(s) par matière. Tu peux corriger une matière en ouvrant le cours.");
+  save();render();alert(n+" cours classé(s) par matière. Si tu corriges une matière à la main, elle ne sera plus changée.");
 }
 function ficheMat(t){S.view="fiches";S.fm="mat";S.fmat2=t;render()}
+function recents(t){S.view="fiches";S.fm="last";S.fmat=t;S.fn=5;render()}
 
 /* ---------- Page « Fiches de révision » ---------- */
 function matieres(){var o={};S.courses.forEach(function(c){o[c.theme]=1});return Object.keys(o).sort(function(a,b){return a.localeCompare(b,"fr")})}
@@ -318,7 +323,9 @@ function setFm(m){S.fm=m;renderDetail()}
 function recap(list,title){
   if(!list.length)return'<p class="empty">Aucun cours dans cette sélection.</p>';
   var F=freqOf(list.map(txtOf).join("\n")),kw=topWords(F,12,2),ds=list.map(function(c){return c.created}),
+    vide=list.filter(function(c){var a=analyse(txtOf(c));return!a.pts.length&&!a.defs.length}).length,
     h='<h2 class="ft" style="margin-top:6px">'+esc(title)+'</h2><small class="mu">'+list.length+" cours · du "+fmt(Math.min.apply(null,ds))+" au "+fmt(Math.max.apply(null,ds))+"</small>";
+  if(vide)h+='<div class="warn">'+vide+" cours sur "+list.length+" n’ont que leur titre, sans contenu : lance la dernière version de netypareo_helper.py puis resynchronise.</div>";
   if(kw.length)h+='<h3>Les thèmes qui reviennent</h3><div class="kw">'+kw.map(function(k){return'<span>'+esc(k)+"</span>"}).join("")+"</div>";
   list.forEach(function(c){h+='<div class="sep"></div>'+block(c,analyse(txtOf(c)),{title:true,kw:false,max:list.length>3?5:8})});
   return h;
@@ -401,16 +408,19 @@ function renderDetail(){
   var h='<div class="row"><input class="ti" id="ti" value="'+esc(c.title)+'" aria-label="Titre" oninput="upd(\'title\',this.value)">'+
     '<input class="th" list="tl" value="'+esc(c.theme)+'" aria-label="Matière" oninput="upd(\'theme\',this.value)"><datalist id="tl">'+themes.map(function(t){return'<option value="'+esc(t)+'">'}).join("")+'</datalist>'+
     '<button onclick="del(\''+c.id+'\')">Supprimer</button></div>'+
-    '<small style="color:var(--mu)">Ajouté le '+fmt(c.created)+'</small>'+
+    '<small style="color:var(--mu)">Cours du '+fmt(c.created)+" · source : "+srcLabel(c)+'</small>'+
     '<div class="tabs">'+[["cours","Cours"],["fiche","Fiche de révision"],["files","Fichiers ("+(c.files||[]).length+")"],["notes","Notes ("+c.notes.length+")"]].map(function(t){
       return'<button class="'+(S.tab===t[0]?"on":"")+'" onclick="S.tab=\''+t[0]+'\';renderDetail()">'+t[1]+"</button>"}).join("")+"</div>";
   if(S.tab==="cours"){
     h+='<textarea oninput="upd(\'content\',this.value,1)" placeholder="Collez ou écrivez votre cours ici.&#10;&#10;Pour une fiche de révision automatique :&#10;- une ligne qui commence par un tiret = point essentiel&#10;- Mot : définition = flashcard">'+esc(c.content)+"</textarea>";
   }else if(S.tab==="fiche"){
-    var th=S.courses.filter(function(x){return x.theme===c.theme}).sort(function(a,b){return a.order-b.order});
+    var th=S.courses.filter(function(x){return x.theme===c.theme}).sort(function(a,b){return a.order-b.order}),
+        rc=S.courses.filter(function(x){return x.theme===c.theme}).sort(function(a,b){return b.created-a.created}).slice(0,5),
+        L=S.scope==="theme"?th:S.scope==="recent"?rc:[c];
     h+='<div class="row"><button class="'+(S.scope==="cours"?"p":"")+'" onclick="S.scope=\'cours\';renderDetail()">Ce cours</button>'+
-       '<button class="'+(S.scope==="theme"?"p":"")+'" onclick="S.scope=\'theme\';renderDetail()">Toute la matière « '+esc(c.theme)+" » ("+th.length+')</button></div>'+
-       '<div class="fiche">'+ficheHTML(S.scope==="theme"?th:[c])+"</div>";
+       '<button class="'+(S.scope==="recent"?"p":"")+'" onclick="S.scope=\'recent\';renderDetail()">Résumé des derniers cours « '+esc(c.theme)+' »</button>'+
+       '<button class="'+(S.scope==="theme"?"p":"")+'" onclick="S.scope=\'theme\';renderDetail()">Toute la matière ('+th.length+')</button></div>'+
+       '<div class="fiche">'+ficheHTML(L)+"</div>";
   }else if(S.tab==="files"){
     h+='<div class="row"><button class="p" onclick="el(\'up\').click()">+ Ajouter un fichier</button><input type="file" id="up" multiple hidden onchange="upFiles(this)"></div>';
     h+=(c.files||[]).map(function(f){return'<div class="item"><span class="t" style="padding:8px 0"><b>'+esc(f.name)+'</b><small>'+kb(f.size)+'</small></span><button class="mv" onclick="dlFile(\''+f.id+'\',this.dataset.n)" data-n="'+esc(f.name)+'">Télécharger</button><button class="mv" onclick="rmFile(\''+f.id+'\')">Supprimer</button></div>'}).join("")||'<div class="empty">Aucun fichier. Ajoutez-en ou importez un cours depuis Netypareo.</div>';
@@ -424,7 +434,7 @@ function renderDetail(){
   box.innerHTML=h;
 }
 function upd(k,v,quiet){
-  var c=get(S.cur);c[k]=v;save();
+  var c=get(S.cur);c[k]=v;if(k==="theme")c.lock=1;save();
   if(k==="title"||k==="theme"){renderList();if(k==="theme")renderThemes()}
 }
 function addNote(){var c=get(S.cur);c.notes.unshift({id:uid(),text:"",date:Date.now()});save();renderDetail();var t=document.querySelector("textarea.lined");if(t)t.focus()}
@@ -475,15 +485,25 @@ function ntySync(){
   }).then(function(r){return r.json()}).then(function(d){
     el("np").value="";
     if(d.error){st.textContent=d.error;return}
-    var have={},n=0;S.courses.forEach(function(c){if(c.src)have[c.src]=1});
+    var have={},n=0,up=0;S.courses.forEach(function(c){if(c.src)have[c.src]=c});
     d.courses.forEach(function(x){
-      if(have[x.key])return;n++;
+      var old=have[x.key];
+      if(old){
+        /* cours déjà là : on complète son contenu s'il est plus riche (la matière choisie à la main reste) */
+        if(String(x.text).length>(old.content||"").length+50){
+          old.content=x.text;up++;
+          if(!(old.files||[]).length&&x.files.length)attach(old,x.files.map(function(f){return{name:f.name,get:function(){return fetch(f.data).then(function(r){return r.blob()})}}}),render);
+          if(!old.lock)old.theme=autoMatiere(old.title,old.content,"");
+        }
+        return;
+      }
+      n++;
       var c={id:uid(),src:x.key,title:x.title,theme:autoMatiere(x.title,x.text,x.theme),content:x.text,notes:[],files:[],created:x.date||Date.now(),order:nextOrder()};
       S.courses.push(c);
       attach(c,x.files.map(function(f){return{name:f.name,get:function(){return fetch(f.data).then(function(r){return r.blob()})}}}),render);
     });
     save();render();
-    st.textContent=n+" nouveau(x) cours importé(s), "+(d.courses.length-n)+" déjà présent(s).";
+    st.textContent=n+" nouveau(x) cours importé(s), "+up+" complété(s) avec leur contenu, "+(d.courses.length-n-up)+" déjà à jour.";
   }).catch(function(e){
     if(e&&e.ping){
       var https=location.protocol==="https:";
