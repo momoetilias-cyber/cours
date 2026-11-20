@@ -56,6 +56,13 @@ h3{margin:18px 0 8px;font-size:17px;background:linear-gradient(transparent 55%,v
 .empty{color:var(--mu);padding:30px 10px;text-align:center}
 dialog{border:2px solid var(--tx);border-radius:10px;background:var(--sf);color:var(--tx);max-width:520px;width:92%}
 dialog textarea{min-height:160px}
+.mu{color:var(--mu)}
+.ft{font-size:20px;margin:22px 0 2px}
+.sep{border-top:2px solid var(--bd);margin:22px 0 0}
+.grp{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:14px 0 6px;font-weight:700;border-bottom:2px solid var(--tx);padding-bottom:3px}
+.grp small{color:var(--mu);font-weight:400}
+.grp button{font-size:13px;padding:2px 10px;background:var(--hl)}
+@media print{header,main>section:first-child,.noprint{display:none!important}main{display:block;padding:0}.panel{border:0;padding:0}.fc span{display:block}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -65,6 +72,7 @@ dialog textarea{min-height:160px}
   <div class="row" style="margin:0">
     <button class="p" onclick="addCourse()">+ Nouveau cours</button>
     <button class="p" onclick="el('nty').showModal()">Connecter Netypareo</button>
+    <button class="p" onclick="showFiches()">Fiches de révision</button>
     <button onclick="el('dlg').showModal()">Ajouter une liste</button>
     <button onclick="exportData()">Sauvegarder</button>
     <button onclick="el('file').click()">Restaurer</button>
@@ -77,12 +85,14 @@ dialog textarea{min-height:160px}
     <div class="tools">
       <input id="q" type="search" placeholder="Rechercher un cours" oninput="S.q=this.value;renderList()">
       <select id="sort" onchange="S.sort=this.value;save();renderList()" aria-label="Trier">
+        <option value="mat">Par matière</option>
         <option value="order">Mon ordre</option>
         <option value="new">Ajout : récent</option>
         <option value="old">Ajout : ancien</option>
         <option value="az">A → Z</option>
       </select>
     </div>
+    <div class="tools"><button onclick="autoClass()" style="flex:1">Classer automatiquement par matière</button></div>
     <div id="list"></div>
   </section>
   <section class="panel" id="detail"></section>
@@ -106,7 +116,7 @@ dialog textarea{min-height:160px}
 
 <dialog id="dlg">
   <form method="dialog">
-    <p><b>Ajouter plusieurs cours d’un coup</b><br><small>Un cours par ligne, au format : Thème | Titre du cours<br>Exemple : Maths | Les fractions</small></p>
+    <p><b>Ajouter plusieurs cours d’un coup</b><br><small>Un cours par ligne, au format : Matière | Titre du cours<br>Exemple : Maths | Les fractions</small></p>
     <textarea id="bulk" placeholder="Maths | Les fractions&#10;Histoire | La Révolution française"></textarea>
     <div class="row" style="margin:10px 0 0;justify-content:flex-end">
       <button value="cancel">Annuler</button>
@@ -117,19 +127,19 @@ dialog textarea{min-height:160px}
 
 <script>
 var KEY="mes-cours-v1";
-var S={courses:[],sort:"order",theme:"",cur:"",tab:"cours",scope:"cours",q:""};
+var S={courses:[],sort:"mat",theme:"",cur:"",tab:"cours",scope:"cours",q:"",view:"cours",fm:"last",fn:5,fmat:"",fmat2:"",ftopic:"",fl:[]};
 function el(i){return document.getElementById(i)}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
 function uid(){return Math.random().toString(36).slice(2,9)}
-function load(){try{var d=JSON.parse(localStorage.getItem(KEY));if(d&&d.courses){S.courses=d.courses;S.sort=d.sort||"order"}}catch(e){}}
-function save(){try{localStorage.setItem(KEY,JSON.stringify({courses:S.courses,sort:S.sort}))}catch(e){}}
+function load(){try{var d=JSON.parse(localStorage.getItem(KEY));if(d&&d.courses){S.courses=d.courses;S.sort=d.v2?(d.sort||"mat"):"mat"}}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify({courses:S.courses,sort:S.sort,v2:1}))}catch(e){}}
 function fmt(t){return new Date(t).toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"numeric"})}
 function get(id){return S.courses.filter(function(c){return c.id===id})[0]}
 function nextOrder(){return S.courses.reduce(function(m,c){return Math.max(m,c.order)},0)+1}
 
 function addCourse(){
   var c={id:uid(),title:"Nouveau cours",theme:S.theme||"Général",content:"",notes:[],created:Date.now(),order:nextOrder()};
-  S.courses.push(c);S.cur=c.id;S.tab="cours";save();render();
+  S.courses.push(c);S.cur=c.id;S.tab="cours";S.view="cours";save();render();
   var t=el("ti");if(t){t.focus();t.select()}
 }
 function bulkAdd(){
@@ -149,7 +159,7 @@ function sorted(){
     return (!S.theme||c.theme===S.theme)&&(!S.q||(c.title+" "+c.content).toLowerCase().indexOf(S.q.toLowerCase())>-1);
   });
   var f={order:function(a,b){return a.order-b.order},new:function(a,b){return b.created-a.created},
-    old:function(a,b){return a.created-b.created},az:function(a,b){return a.title.localeCompare(b.title,"fr")}}[S.sort];
+    old:function(a,b){return a.created-b.created},mat:function(a,b){return a.theme.localeCompare(b.theme,"fr")||b.created-a.created},az:function(a,b){return a.title.localeCompare(b.title,"fr")}}[S.sort];
   return L.sort(f);
 }
 function move(id,d){
@@ -157,7 +167,7 @@ function move(id,d){
   if(j<0||j>=L.length)return;
   var t=L[i].order;L[i].order=L[j].order;L[j].order=t;save();renderList();
 }
-function pick(id){S.cur=id;renderList();renderDetail()}
+function pick(id){S.view="cours";S.cur=id;renderList();renderDetail()}
 function setTheme(t){S.theme=t;render()}
 
 function renderThemes(){
@@ -169,8 +179,10 @@ function renderThemes(){
   el("themes").innerHTML=h;
 }
 function renderList(){
-  var L=sorted(),h="";
+  var L=sorted(),h="",last=null,cnt={};
+  L.forEach(function(c){cnt[c.theme]=(cnt[c.theme]||0)+1});
   L.forEach(function(c){
+    if(S.sort==="mat"&&c.theme!==last){last=c.theme;h+='<div class="grp"><span>'+esc(c.theme)+' <small>('+cnt[c.theme]+')</small></span><button data-t="'+esc(c.theme)+'" onclick="ficheMat(this.dataset.t)">Fiche</button></div>'}
     h+='<div class="item'+(c.id===S.cur?" on":"")+'"><button class="t" onclick="pick(\''+c.id+'\')"><b>'+esc(c.title)+'</b><small>'+esc(c.theme)+" · ajouté le "+fmt(c.created)+'</small></button>';
     if(S.sort==="order")h+='<button class="mv" onclick="move(\''+c.id+'\',-1)" aria-label="Monter">▲</button><button class="mv" onclick="move(\''+c.id+'\',1)" aria-label="Descendre">▼</button>';
     h+='</div>';
@@ -179,44 +191,215 @@ function renderList(){
   el("sort").value=S.sort;
 }
 
-/* Fiche de révision automatique */
-var STOP="avec dans pour mais cette comme sont être avoir elle elles nous vous leur leurs plus tout tous ainsi aussi donc alors entre sans sous chez très fait faire peut peuvent celui celle ceux cela cette ces des les une est que qui par sur pas".split(" ");
-function analyse(txt){
-  var pts=[],defs=[],words={};
-  txt.split("\n").forEach(function(l){
-    var s=l.trim();if(!s)return;
-    var m=s.match(/^([-•*]|\d+[.)]|#+)\s+(.+)$/);
-    var d=s.replace(/^([-•*]|\d+[.)]|#+)\s+/,"").match(/^([^:=]{2,60}?)\s*[:=]\s*(.{5,})$/);
-    if(d)defs.push({t:d[1],d:d[2]});
-    else if(m)pts.push(m[2]);
-  });
-  if(!pts.length&&!defs.length){
-    txt.split(/\n\s*\n/).forEach(function(p){var f=p.trim().split(/(?<=[.!?])\s/)[0];if(f&&f.length>15)pts.push(f)});
-  }
-  (txt.toLowerCase().match(/[a-zàâçéèêëîïôûùüÿœ-]{6,}/g)||[]).forEach(function(w){if(STOP.indexOf(w)<0)words[w]=(words[w]||0)+1});
-  var kw=Object.keys(words).filter(function(w){return words[w]>1}).sort(function(a,b){return words[b]-words[a]}).slice(0,10);
-  return{pts:pts,defs:defs,kw:kw};
+/* ---------- Lecture du contenu + fiches de révision ---------- */
+function norm(s){return String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")}
+var STOPN=("avec dans pour mais cette comme sont etre avoir elle elles nous vous leur leurs plus tout tous ainsi aussi donc alors entre sans sous chez tres fait faire peut peuvent celui celle ceux cela ces des les une est que qui par sur pas quand lorsque apres avant pendant depuis egalement notamment cours seance seront etaient serait notre votre autres autre plusieurs chaque different differents permet permettent doit doivent").split(" ");
+var META=/^(mati[eè]re|discipline|module|intervenants?|formateurs?|salle|date|heure|horaires?|dur[ée]e|groupe|classe|titre|source|lieu|statut)$/i;
+var NOISE=/^(date|heure|horaires?|dur[ée]e|salle|lieu|groupe|classe|statut|pr[ée]sence|intervenants?|formateurs?|enseignants?|source)\b.{0,60}$/i;
+var TIMEONLY=/^[\d\s\/:hH\-–.,]+$/;
+function txtOf(c){return (c.content||"")+"\n"+(c.notes||[]).map(function(n){return n.text}).join("\n")}
+function clean(txt){
+  return String(txt||"").split("\n").map(function(l){return l.trim()}).filter(function(l){
+    return l&&!TIMEONLY.test(l)&&!(l.length<70&&NOISE.test(l))&&!/^https?:\/\//.test(l);
+  }).join("\n");
 }
-function ficheHTML(list){
-  var out="";
-  list.forEach(function(c){
-    var a=analyse(c.content);
-    if(list.length>1)out+='<h2 style="font-size:19px;margin:22px 0 0">'+esc(c.title)+'</h2>';
-    if(!a.pts.length&&!a.defs.length){out+='<p class="empty">Rien à résumer : écrivez le contenu du cours dans l’onglet Cours.</p>';return}
-    if(a.kw.length)out+='<h3>Mots-clés</h3><div class="kw">'+a.kw.map(function(k){return"<span>"+esc(k)+"</span>"}).join("")+"</div>";
-    if(a.pts.length)out+='<h3>Points essentiels</h3><ul>'+a.pts.map(function(p){return"<li>"+esc(p)+"</li>"}).join("")+"</ul>";
-    if(a.defs.length)out+='<h3>Flashcards <small style="font-weight:400">(cliquez pour voir la réponse)</small></h3><div class="cards">'+
-      a.defs.map(function(d){return'<div class="fc" onclick="this.classList.toggle(\'on\')"><b>'+esc(d.t)+" ?</b><span>"+esc(d.d)+"</span></div>"}).join("")+"</div>";
+function sentences(txt){
+  var out=[];
+  clean(txt).split("\n").forEach(function(line){
+    line=line.replace(/^([-•*]|\d+[.)]|#+)\s+/,"");
+    line.split(/(?<=[.!?])\s+/).forEach(function(s){s=s.trim();if(s.length>=20&&s.length<=320)out.push(s)});
   });
   return out;
+}
+function freqOf(txt){
+  var f={},o={};
+  (clean(txt).toLowerCase().match(/[a-zàâçéèêëîïôûùüÿœ]{5,}/g)||[]).forEach(function(w){
+    var k=norm(w);if(STOPN.indexOf(k)>-1)return;
+    f[k]=(f[k]||0)+1;if(!o[k])o[k]=w;
+  });
+  return{f:f,o:o};
+}
+function topWords(F,n,min){
+  return Object.keys(F.f).filter(function(k){return F.f[k]>=min}).sort(function(a,b){return F.f[b]-F.f[a]}).slice(0,n).map(function(k){return F.o[k]});
+}
+function summarize(sents,F,n){
+  var sc=sents.map(function(s,i){
+    var w=norm(s).match(/[a-z]{5,}/g)||[],t=0;
+    w.forEach(function(x){t+=F.f[x]||0});
+    var v=t/Math.sqrt(w.length||1);
+    if(/\d/.test(s))v*=1.15;
+    if(/important|retenir|attention|definition|formule|exemple|rappel|doit|obligatoire|regle/.test(norm(s)))v*=1.4;
+    if(i===0)v*=1.2;
+    if(s.length>240)v*=.8;
+    return{s:s,i:i,v:v};
+  });
+  return sc.sort(function(a,b){return b.v-a.v}).slice(0,n).sort(function(a,b){return a.i-b.i}).map(function(x){return x.s});
+}
+var PRON=/^(il|elle|ils|elles|on|ce|cet|cette|ces|cela|ceci|ça|nous|vous|je|tu|c['’])(\s|$)/i;
+function analyse(raw){
+  var pts=[],defs=[];
+  clean(raw).split("\n").forEach(function(s){
+    var m=s.match(/^([-•*]|\d+[.)]|#+)\s+(.+)$/),b=s.replace(/^([-•*]|\d+[.)]|#+)\s+/,""),d=b.match(/^([^:=]{2,60}?)\s*[:=]\s*(.{5,})$/);
+    if(d){if(!META.test(d[1].trim()))defs.push({t:d[1].trim(),d:d[2]})}
+    else if(m)pts.push(m[2]);
+  });
+  var sents=sentences(raw),F=freqOf(raw);
+  sents.forEach(function(s){
+    var d=s.match(/^(?:(?:le|la|les|un|une|des)\s+|l['’])?([^,.;:()]{3,45}?)\s+(?:est|sont|désigne|désignent|correspond à|correspondent à|se définit comme|consiste à|permet de)\s+/i);
+    if(d&&!PRON.test(d[1])&&d[1].split(" ").length<=5&&defs.length<12&&!defs.some(function(x){return x.t===d[1].trim()}))defs.push({t:d[1].trim(),d:s});
+  });
+  var best=pts.length?pts.slice(0,20):summarize(sents,F,Math.max(3,Math.min(10,Math.round(sents.length*.4))));
+  var kw=topWords(F,10,2);if(!kw.length)kw=topWords(F,6,1);
+  return{pts:best,defs:defs,kw:kw,n:sents.length};
+}
+function flash(defs,max){
+  return defs.slice(0,max).map(function(d){return'<div class="fc" onclick="this.classList.toggle(\'on\')"><b>'+esc(d.t)+" ?</b><span>"+esc(d.d)+"</span></div>"}).join("");
+}
+function block(c,a,o){
+  var h="";
+  if(o.title)h+='<h2 class="ft">'+esc(c.title)+'</h2><small class="mu">'+esc(c.theme)+" · "+fmt(c.created)+"</small>";
+  if(!a.pts.length&&!a.defs.length)return h+'<p class="empty">Contenu trop court pour faire une fiche : colle le texte du cours dans l’onglet Cours.</p>';
+  if(o.kw&&a.kw.length)h+='<h3>Mots-clés</h3><div class="kw">'+a.kw.map(function(k){return"<span>"+esc(k)+"</span>"}).join("")+"</div>";
+  if(a.pts.length)h+='<h3>Points essentiels</h3><ul>'+a.pts.slice(0,o.max||99).map(function(p){return"<li>"+esc(p)+"</li>"}).join("")+"</ul>";
+  if(a.defs.length)h+='<h3>Flashcards <small style="font-weight:400">(cliquez pour voir la réponse)</small></h3><div class="cards">'+flash(a.defs,o.max?4:99)+"</div>";
+  return h;
+}
+function ficheHTML(list){
+  return list.map(function(c){return block(c,analyse(txtOf(c)),{title:list.length>1,kw:true})}).join("");
+}
+
+/* ---------- Matières ---------- */
+var MAT=[
+["Mathématiques","mathematique|\\bmaths?\\b|fraction|equation|fonction|derive|probabilit|statistique|geometrie|algebre|pourcentage"],
+["Français","francais|litterature|grammaire|conjugaison|dissertation|roman|poesie|rhetorique|expression ecrite|culture generale"],
+["Philosophie","philosophie|\\bphilo\\b|descartes|platon|kant"],
+["Histoire-Géographie","histoire|geographie|\\bhg\\b|revolution|moyen age|republique|territoire|guerre"],
+["Anglais","anglais|english|vocabulary|grammar|\\bpresent perfect|\\blv1"],
+["Espagnol","espagnol|\\bspanish|\\blv2"],
+["Allemand","allemand|deutsch"],
+["Physique-Chimie","physique|chimie|\\batome|molecule|electricite|\\bforce\\b|reaction chimique|tension|intensite"],
+["SVT / Biologie","\\bsvt\\b|biologie|cellule|genetique|ecosysteme|\\badn\\b|physiologie"],
+["Informatique","informatique|programmation|python|javascript|\\bhtml|\\bsql\\b|reseau|algorithme|base de donnees|numerique|cybersecurite"],
+["Économie","economie|\\bpib\\b|inflation|marche|offre et demande|croissance|chomage"],
+["Droit","\\bdroit\\b|juridique|contrat|code civil|tribunal|responsabilite civile|loi\\b"],
+["Gestion-Comptabilité","gestion|comptabilite|bilan|\\btva\\b|compte de resultat|budget|tresorerie|facture"],
+["Management","management|organisation|strategie|ressources humaines|\\brh\\b|leadership"],
+["Marketing-Vente","marketing|vente|client|prospect|negociation|prospection|commercial"],
+["Communication","communication|oral|presentation|rapport|reunion"],
+["EPS","\\beps\\b|sport|athletisme|natation|musculation"]
+];
+function autoMatiere(title,text,hint){
+  var m=String(text||"").match(/(?:mati[eè]re|discipline|enseignement|module)\s*:\s*([^\n]{2,50})/i),lab=m?m[1].trim():"";
+  var cand=norm(title+" "+(hint||"")+" "+lab),body=norm(text),best="",bs=0;
+  MAT.forEach(function(x){
+    var re=new RegExp(x[1],"g"),s=((cand.match(re)||[]).length*4)+Math.min(8,(body.match(re)||[]).length);
+    if(s>bs){bs=s;best=x[0]}
+  });
+  if(bs>0)return best;
+  if(lab&&lab.length<40)return lab.charAt(0).toUpperCase()+lab.slice(1);
+  return"Général";
+}
+function autoClass(){
+  var gen=["","Netypareo","Général","Autre"],n=0;
+  S.courses.forEach(function(c){
+    if(gen.indexOf(c.theme)>-1||c.src){var m=autoMatiere(c.title,c.content,c.src?"":c.theme);if(m!==c.theme){c.theme=m;n++}}
+  });
+  save();render();alert(n+" cours classé(s) par matière. Tu peux corriger une matière en ouvrant le cours.");
+}
+function ficheMat(t){S.view="fiches";S.fm="mat";S.fmat2=t;render()}
+
+/* ---------- Page « Fiches de révision » ---------- */
+function matieres(){var o={};S.courses.forEach(function(c){o[c.theme]=1});return Object.keys(o).sort(function(a,b){return a.localeCompare(b,"fr")})}
+function opts(vals,sel,all){
+  return(all?'<option value="">'+all+"</option>":"")+vals.map(function(v){return'<option value="'+esc(v)+'"'+(v===sel?" selected":"")+">"+esc(v)+"</option>"}).join("");
+}
+function showFiches(){S.view="fiches";render()}
+function setFm(m){S.fm=m;renderDetail()}
+function recap(list,title){
+  if(!list.length)return'<p class="empty">Aucun cours dans cette sélection.</p>';
+  var F=freqOf(list.map(txtOf).join("\n")),kw=topWords(F,12,2),ds=list.map(function(c){return c.created}),
+    h='<h2 class="ft" style="margin-top:6px">'+esc(title)+'</h2><small class="mu">'+list.length+" cours · du "+fmt(Math.min.apply(null,ds))+" au "+fmt(Math.max.apply(null,ds))+"</small>";
+  if(kw.length)h+='<h3>Les thèmes qui reviennent</h3><div class="kw">'+kw.map(function(k){return'<span>'+esc(k)+"</span>"}).join("")+"</div>";
+  list.forEach(function(c){h+='<div class="sep"></div>'+block(c,analyse(txtOf(c)),{title:true,kw:false,max:list.length>3?5:8})});
+  return h;
+}
+function topicHTML(q,ids){
+  var terms=norm(q).split(/[^a-z0-9]+/).filter(function(t){return t.length>2}).map(function(t){return t.length>4?t.replace(/[sx]$/,""):t});
+  if(!terms.length)return"";
+  var res=[],has=function(s){var n=norm(s);return terms.some(function(t){return n.indexOf(t)>-1})};
+  S.courses.slice().sort(function(a,b){return b.created-a.created}).forEach(function(c){
+    var txt=txtOf(c),inTitle=has(c.title+" "+c.theme),sc=[];
+    sentences(txt).forEach(function(s,i){var ns=norm(s),k=terms.filter(function(t){return ns.indexOf(t)>-1}).length;if(k)sc.push({s:s,k:k,i:i})});
+    var a=analyse(txt),defs=a.defs.filter(function(d){return has(d.t+" "+d.d)});
+    if(!sc.length&&!inTitle&&!defs.length)return;
+    var lines=sc.sort(function(x,y){return y.k-x.k||x.i-y.i}).slice(0,8).sort(function(x,y){return x.i-y.i}).map(function(x){return x.s});
+    if(!lines.length)lines=a.pts.slice(0,4);
+    res.push({c:c,lines:lines,defs:defs.slice(0,6)});ids.push(c.id);
+  });
+  if(!res.length){
+    var sug=topWords(freqOf(S.courses.map(txtOf).join("\n")),14,2);
+    return'<p class="empty">Rien trouvé sur « '+esc(q)+' ».'+(sug.length?" Essaie un de ces thèmes :":"")+'</p>'+
+      '<div class="kw" style="justify-content:center">'+sug.map(function(k){return'<button data-t="'+esc(k)+'" onclick="setTopic(this.dataset.t)">'+esc(k)+"</button>"}).join("")+"</div>";
+  }
+  var rel=freqOf(res.map(function(r){return r.lines.join("\n")}).join("\n")),kw=topWords(rel,30,1).filter(function(w){return!has(w)}).slice(0,10);
+  var h='<h2 class="ft" style="margin-top:6px">Thème : '+esc(q)+'</h2><small class="mu">'+res.length+" cours concerné(s), du plus récent au plus ancien</small>";
+  if(kw.length)h+='<h3>Notions liées</h3><div class="kw">'+kw.map(function(k){return"<span>"+esc(k)+"</span>"}).join("")+"</div>";
+  res.forEach(function(r){
+    h+='<div class="sep"></div><h3 style="margin-top:6px">'+esc(r.c.title)+'</h3> <small class="mu">'+esc(r.c.theme)+" · "+fmt(r.c.created)+"</small><ul>"+
+      r.lines.map(function(l){return"<li>"+esc(l)+"</li>"}).join("")+"</ul>";
+    if(r.defs.length)h+='<div class="cards">'+flash(r.defs,6)+"</div>";
+  });
+  return h;
+}
+function renderFiches(){
+  var box=el("detail"),M=matieres(),body="",ctl="",ids=[];
+  var T=[["last","Rappel des derniers cours"],["mat","Par matière"],["topic","Par thème précis"]];
+  var h='<div class="row noprint"><b style="font-size:21px;flex:1">Fiches de révision</b><button onclick="S.view=\'cours\';render()">← Retour aux cours</button></div>'+
+    '<div class="tabs noprint">'+T.map(function(t){return'<button class="'+(S.fm===t[0]?"on":"")+'" onclick="setFm(\''+t[0]+'\')">'+t[1]+"</button>"}).join("")+"</div>";
+  if(!S.courses.length){box.innerHTML=h+'<div class="empty">Ajoute ou synchronise des cours pour créer des fiches.</div>';return}
+  if(S.fm==="last"){
+    var list=S.courses.filter(function(c){return!S.fmat||c.theme===S.fmat}).sort(function(a,b){return b.created-a.created}).slice(0,S.fn);
+    list.forEach(function(c){ids.push(c.id)});
+    ctl='<div class="row noprint">Les <select class="th" onchange="S.fn=+this.value;renderDetail()">'+[3,5,10,20].map(function(n){return'<option'+(n===S.fn?" selected":"")+">"+n+"</option>"}).join("")+'</select> derniers cours en '+
+      '<select class="th" onchange="S.fmat=this.value;renderDetail()">'+opts(M,S.fmat,"toutes les matières")+"</select></div>";
+    body=recap(list,"Rappel des derniers cours"+(S.fmat?" – "+S.fmat:""));
+  }else if(S.fm==="mat"){
+    if(M.indexOf(S.fmat2)<0)S.fmat2=M[0];
+    var l2=S.courses.filter(function(c){return c.theme===S.fmat2}).sort(function(a,b){return a.created-b.created});
+    l2.forEach(function(c){ids.push(c.id)});
+    ctl='<div class="row noprint">Matière : <select class="th" onchange="S.fmat2=this.value;renderDetail()">'+opts(M,S.fmat2)+"</select></div>";
+    body=recap(l2,"Fiche de matière : "+S.fmat2);
+  }else{
+    ctl='<div class="row noprint"><input id="ftp" class="th" style="flex:1;min-width:180px" placeholder="Ex : fractions, Révolution, TVA…" value="'+esc(S.ftopic)+'" onkeydown="if(event.key===\'Enter\')runTopic()"><button class="p" onclick="runTopic()">Faire la fiche</button></div>';
+    body=S.ftopic?topicHTML(S.ftopic,ids):'<p class="empty">Écris un thème (un mot ou deux) : je rassemble ce que disent tous tes cours dessus.</p>';
+  }
+  S.fl=ids;
+  box.innerHTML=h+ctl+'<div class="fiche" id="fout">'+body+'</div>'+
+    '<div class="row noprint" style="margin-top:16px"><button onclick="copyFiche()">Copier la fiche</button><button onclick="window.print()">Imprimer / PDF</button><button onclick="copyForClaude()">Copier pour Claude</button><span id="cst" class="mu" role="status"></span></div>';
+}
+function runTopic(){S.ftopic=el("ftp").value.trim();renderDetail()}
+function setTopic(t){S.ftopic=t;renderDetail()}
+function copyText(t){
+  var ok=function(){el("cst").textContent="Copié."},ko=function(){
+    var a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();
+    try{document.execCommand("copy");ok()}catch(e){el("cst").textContent="Copie impossible."}a.remove();
+  };
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(ok,ko);else ko();
+}
+function copyFiche(){copyText(el("fout").innerText)}
+function copyForClaude(){
+  var t="Tu es mon assistant de révision. Voici le contenu de mes cours. Fais-moi une vraie fiche de révision claire : un résumé par cours, les définitions et formules à retenir, les pièges à éviter, puis 5 questions pour m’entraîner.\n\n";
+  (S.fl||[]).forEach(function(id){var c=get(id);if(c)t+="=== "+c.title+" ("+c.theme+", "+fmt(c.created)+") ===\n"+clean(txtOf(c))+"\n\n"});
+  copyText(t.slice(0,30000));
 }
 
 function renderDetail(){
   var c=get(S.cur),box=el("detail");
+  if(S.view==="fiches")return renderFiches();
   if(!c){box.innerHTML='<div class="empty">Choisissez un cours à gauche ou créez-en un.</div>';return}
   var themes=Object.keys(S.courses.reduce(function(o,x){o[x.theme]=1;return o},{}));
   var h='<div class="row"><input class="ti" id="ti" value="'+esc(c.title)+'" aria-label="Titre" oninput="upd(\'title\',this.value)">'+
-    '<input class="th" list="tl" value="'+esc(c.theme)+'" aria-label="Thème" oninput="upd(\'theme\',this.value)"><datalist id="tl">'+themes.map(function(t){return'<option value="'+esc(t)+'">'}).join("")+'</datalist>'+
+    '<input class="th" list="tl" value="'+esc(c.theme)+'" aria-label="Matière" oninput="upd(\'theme\',this.value)"><datalist id="tl">'+themes.map(function(t){return'<option value="'+esc(t)+'">'}).join("")+'</datalist>'+
     '<button onclick="del(\''+c.id+'\')">Supprimer</button></div>'+
     '<small style="color:var(--mu)">Ajouté le '+fmt(c.created)+'</small>'+
     '<div class="tabs">'+[["cours","Cours"],["fiche","Fiche de révision"],["files","Fichiers ("+(c.files||[]).length+")"],["notes","Notes ("+c.notes.length+")"]].map(function(t){
@@ -226,7 +409,7 @@ function renderDetail(){
   }else if(S.tab==="fiche"){
     var th=S.courses.filter(function(x){return x.theme===c.theme}).sort(function(a,b){return a.order-b.order});
     h+='<div class="row"><button class="'+(S.scope==="cours"?"p":"")+'" onclick="S.scope=\'cours\';renderDetail()">Ce cours</button>'+
-       '<button class="'+(S.scope==="theme"?"p":"")+'" onclick="S.scope=\'theme\';renderDetail()">Tout le thème « '+esc(c.theme)+" » ("+th.length+')</button></div>'+
+       '<button class="'+(S.scope==="theme"?"p":"")+'" onclick="S.scope=\'theme\';renderDetail()">Toute la matière « '+esc(c.theme)+" » ("+th.length+')</button></div>'+
        '<div class="fiche">'+ficheHTML(S.scope==="theme"?th:[c])+"</div>";
   }else if(S.tab==="files"){
     h+='<div class="row"><button class="p" onclick="el(\'up\').click()">+ Ajouter un fichier</button><input type="file" id="up" multiple hidden onchange="upFiles(this)"></div>';
@@ -295,7 +478,7 @@ function ntySync(){
     var have={},n=0;S.courses.forEach(function(c){if(c.src)have[c.src]=1});
     d.courses.forEach(function(x){
       if(have[x.key])return;n++;
-      var c={id:uid(),src:x.key,title:x.title,theme:x.theme,content:x.text,notes:[],files:[],created:x.date||Date.now(),order:nextOrder()};
+      var c={id:uid(),src:x.key,title:x.title,theme:autoMatiere(x.title,x.text,x.theme),content:x.text,notes:[],files:[],created:x.date||Date.now(),order:nextOrder()};
       S.courses.push(c);
       attach(c,x.files.map(function(f){return{name:f.name,get:function(){return fetch(f.data).then(function(r){return r.blob()})}}}),render);
     });
@@ -318,7 +501,7 @@ window.addEventListener("message",function(e){
   var m=e.data;if(!m||m.type!=="nty"||!Array.isArray(m.files))return;
   if(!confirm("Importer « "+m.title+" » avec "+m.files.length+" fichier(s) ?"))return;
   var c={id:uid(),title:String(m.title).slice(0,200),theme:"Netypareo",content:(m.url?"Source : "+m.url+"\n\n":"")+String(m.text||""),notes:[],files:[],created:Date.now(),order:nextOrder()};
-  S.courses.push(c);S.cur=c.id;S.tab="cours";save();render();
+  S.courses.push(c);S.cur=c.id;S.tab="cours";S.view="cours";save();render();
   attach(c,m.files.map(function(f){return{name:String(f.name),get:function(){return fetch(f.data).then(function(r){return r.blob()})}}}),function(){render()});
 });
 function mkBM(){
